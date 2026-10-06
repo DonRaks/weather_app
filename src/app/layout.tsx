@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { WeatherProvider } from '../context/WeatherContext';
 
+/**
+ * Global Metadata Configuration for Next.js App Router
+ */
 export const metadata: Metadata = {
   title: 'Aura Weather — Atmospheric Intelligence',
   description:
@@ -18,6 +21,12 @@ export const metadata: Metadata = {
   }
 };
 
+/**
+ * Responsive Viewport Configuration
+ *
+ * Configures optimal mobile scaling, viewport bounds, dynamic theme color,
+ * and viewport-fit cover for edge-to-edge display on notched mobile displays.
+ */
 export const viewport: Viewport = {
   themeColor: '#080c16',
   width: 'device-width',
@@ -26,6 +35,16 @@ export const viewport: Viewport = {
   viewportFit: 'cover'
 };
 
+/**
+ * RootLayout Component
+ *
+ * Provides global typography fonts (Outfit, Plus Jakarta Sans, JetBrains Mono),
+ * HTML root metadata, default theme attributes, and context providers.
+ *
+ * @component
+ * @param {{ children: React.ReactNode }} props - React component children.
+ * @returns {React.ReactElement} The Root HTML layout.
+ */
 export default function RootLayout({
   children
 }: {

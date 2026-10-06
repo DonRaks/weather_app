@@ -1,7 +1,35 @@
-import { CurrentWeather, HourlyItem, DailyItem, AQIData, SunMoonData, PrecipSlot, StoryData, ComfortData } from '../types/weather';
+import {
+  CurrentWeather,
+  HourlyItem,
+  DailyItem,
+  AQIData,
+  SunMoonData,
+  PrecipSlot,
+  StoryData,
+  ComfortData
+} from '../types/weather';
 
 /**
- * Pressure trend calculation
+ * Meteorology Calculations & Domain Utilities
+ *
+ * Implements scientific algorithms for:
+ * - Barometric pressure trend identification
+ * - Air Quality Index (AQI) standard categorization
+ * - Astronomical Julian Day Moon phase and illumination calculations
+ * - Solar daylight trajectory & solar noon tracking
+ * - Precipitation timeline horizon assembly
+ * - 4-part diurnal story synthesis
+ * - Multi-factor human biometeorology comfort scoring
+ * - Contextual natural-language weather intelligence briefing
+ * - Unit transformations & cardinal direction vector mapping
+ */
+
+/**
+ * Calculates barometric pressure trend ('Rising', 'Falling', 'Steady')
+ * based on the 3-hour pressure differential.
+ *
+ * @param {number[]} [pressureArray] - Array of recent hourly mean sea-level pressures in hPa.
+ * @returns {'Steady' | 'Rising' | 'Falling'} The calculated barometric tendency.
  */
 export function calculatePressureTrend(pressureArray?: number[]): 'Steady' | 'Rising' | 'Falling' {
   if (!pressureArray || pressureArray.length < 3) return 'Steady';
@@ -12,7 +40,11 @@ export function calculatePressureTrend(pressureArray?: number[]): 'Steady' | 'Ri
 }
 
 /**
- * Air Quality Data Normalizer
+ * Normalizes raw Air Quality API responses into structured domain data
+ * with EPA/WHO health thresholds, status descriptors, and activity advice.
+ *
+ * @param {any} rawAqi - Raw air quality response payload.
+ * @returns {AQIData} Normalized air quality data structure.
  */
 export function normalizeAqiData(rawAqi: any): AQIData {
   if (!rawAqi || !rawAqi.current) {
@@ -71,15 +103,19 @@ export function normalizeAqiData(rawAqi: any): AQIData {
 }
 
 /**
- * Deterministic Moon Phase calculation using Julian Day algorithm
+ * Calculates astronomical lunar phase and illumination percentage
+ * using the deterministic Julian Day algorithm.
+ *
+ * @param {Date} date - The current date object.
+ * @returns {{ phase: number, name: string, illumination: number }} The moon phase properties.
  */
 export function calculateMoonPhase(date: Date) {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
 
-  let c = 365.25 * year;
-  let e = 30.6 * month;
+  const c = 365.25 * year;
+  const e = 30.6 * month;
   let jd = c + e + day - 694039.09;
   jd /= 29.5305882;
   const bInt = parseInt(jd.toString(), 10);
@@ -108,7 +144,12 @@ export function calculateMoonPhase(date: Date) {
 }
 
 /**
- * Sun position on arc and Lunar phase
+ * Computes solar arc progression, sunrise, sunset, solar noon, and lunar state.
+ *
+ * @param {string | null} sunriseISO - ISO date string of today's sunrise.
+ * @param {string | null} sunsetISO - ISO date string of today's sunset.
+ * @param {Date} now - Current date timestamp.
+ * @returns {SunMoonData} Calculated astronomical metrics.
  */
 export function calculateSunMoon(sunriseISO: string | null, sunsetISO: string | null, now: Date): SunMoonData {
   const sunriseDate = sunriseISO ? new Date(sunriseISO) : new Date(new Date().setHours(6, 30, 0, 0));
@@ -150,7 +191,10 @@ export function calculateSunMoon(sunriseISO: string | null, sunsetISO: string | 
 }
 
 /**
- * Precipitation Timeline (Next 4 Hours)
+ * Constructs the next 4-hour precipitation forecast timeline.
+ *
+ * @param {HourlyItem[]} hourlyList - Array of hourly forecasts starting from the current hour.
+ * @returns {PrecipSlot[]} 5-slot precipitation horizon array (Now, +1h, +2h, +3h, +4h).
  */
 export function buildPrecipitationTimeline(hourlyList: HourlyItem[]): PrecipSlot[] {
   return [
@@ -163,7 +207,11 @@ export function buildPrecipitationTimeline(hourlyList: HourlyItem[]): PrecipSlot
 }
 
 /**
- * Today's Story (4-part progression)
+ * Synthesizes a 4-part diurnal progression story (Morning, Afternoon, Evening, Night).
+ *
+ * @param {HourlyItem[]} hourlyList - Hourly forecast items.
+ * @param {DailyItem} [todayDaily] - Today's daily forecast object.
+ * @returns {StoryData} The 4 chronological quarter chapters.
  */
 export function buildStory(hourlyList: HourlyItem[], todayDaily?: DailyItem): StoryData {
   const findHour = (targetHour: number) => {
@@ -211,27 +259,39 @@ export function buildStory(hourlyList: HourlyItem[], todayDaily?: DailyItem): St
 }
 
 /**
- * Deterministic Comfort Index (0-100)
+ * Computes a multi-factor thermodynamic human comfort score (0 - 100).
+ * Penalizes deviations from optimal thermal balance (18-25°C), high humidity,
+ * extreme wind chill or gusts, and severe UV radiation.
+ *
+ * @param {number} tempC - Ambient temperature in Celsius.
+ * @param {number} humidity - Relative humidity percentage.
+ * @param {number} windKmH - Wind speed in km/h.
+ * @param {number} uv - UV index.
+ * @returns {ComfortData} The comfort score, category, and outdoor recommendation.
  */
 export function calculateComfort(tempC: number, humidity: number, windKmH: number, uv: number): ComfortData {
   let penalty = 0;
 
+  // Temperature penalty
   if (tempC < 18) {
     penalty += (18 - tempC) * 2.5;
   } else if (tempC > 25) {
     penalty += (tempC - 25) * 3.5;
   }
 
+  // Humidity penalty
   if (humidity > 65) {
     penalty += (humidity - 65) * 0.8;
   } else if (humidity < 30) {
     penalty += (30 - humidity) * 0.5;
   }
 
+  // Wind penalty
   if (windKmH > 35) {
     penalty += (windKmH - 35) * 0.7;
   }
 
+  // UV radiation penalty
   if (uv > 7) {
     penalty += (uv - 7) * 3;
   }
@@ -261,7 +321,14 @@ export function calculateComfort(tempC: number, humidity: number, windKmH: numbe
 }
 
 /**
- * Contextual Meteorological Summary ("What's Happening")
+ * Generates a concise, context-aware meteorological intelligence summary.
+ * Prioritizes active precipitation, incoming rain events, severe wind gusts,
+ * extreme UV exposure, and diurnal thermal swings.
+ *
+ * @param {CurrentWeather} current - Current weather telemetry.
+ * @param {HourlyItem[]} hourlyList - Hourly forecast array.
+ * @param {DailyItem[]} dailyList - Daily forecast array.
+ * @returns {string} Natural language meteorological briefing.
  */
 export function generateIntelligenceSummary(
   current: CurrentWeather,
@@ -297,7 +364,11 @@ export function generateIntelligenceSummary(
 }
 
 /**
- * Unit conversions
+ * Converts temperatures between Celsius and Fahrenheit.
+ *
+ * @param {number} tempC - Temperature in Celsius.
+ * @param {'C' | 'F'} [unit='C'] - Desired output scale.
+ * @returns {number} Formatted rounded integer temperature.
  */
 export function formatTemperature(tempC: number, unit: 'C' | 'F' = 'C'): number {
   if (unit === 'F') {
@@ -306,12 +377,25 @@ export function formatTemperature(tempC: number, unit: 'C' | 'F' = 'C'): number 
   return Math.round(tempC);
 }
 
+/**
+ * Converts wind velocities between metric km/h, imperial mph, and nautical knots.
+ *
+ * @param {number} speedKmH - Wind velocity in km/h.
+ * @param {'km/h' | 'mph' | 'knots'} [unit='km/h'] - Desired output unit.
+ * @returns {number} Formatted rounded wind velocity.
+ */
 export function formatWindSpeed(speedKmH: number, unit: 'km/h' | 'mph' | 'knots' = 'km/h'): number {
   if (unit === 'mph') return Math.round(speedKmH * 0.621371);
   if (unit === 'knots') return Math.round(speedKmH * 0.539957);
   return Math.round(speedKmH);
 }
 
+/**
+ * Converts compass degrees (0° to 360°) to a 16-point cardinal direction string.
+ *
+ * @param {number} deg - Meteorological wind direction angle in degrees (0° = North).
+ * @returns {string} Cardinal label (e.g. 'N', 'NE', 'SSW', 'NW').
+ */
 export function getCardinalDirection(deg: number): string {
   const directions = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   const idx = Math.round(deg / 22.5) % 16;

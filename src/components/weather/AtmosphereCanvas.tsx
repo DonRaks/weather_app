@@ -3,21 +3,41 @@
 import React, { useEffect, useRef } from 'react';
 import { useWeather } from '../../context/WeatherContext';
 
+/**
+ * Procedural Particle Definition
+ */
 interface Particle {
-  type: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  size: number;
-  alpha: number;
-  maxAlpha?: number;
-  pulseSpeed?: number;
-  angle?: number;
-  spin?: number;
-  length?: number;
+  type: string;           // 'sun_mote' | 'star' | 'raindrop' | 'snowflake' | 'cloud_puff'
+  x: number;              // Horizontal coordinate (px)
+  y: number;              // Vertical coordinate (px)
+  vx: number;             // Horizontal velocity vector (px/frame)
+  vy: number;             // Vertical velocity vector (px/frame)
+  size: number;           // Radius or stroke thickness (px)
+  alpha: number;          // Current opacity (0.0 - 1.0)
+  maxAlpha?: number;      // Maximum opacity limit
+  pulseSpeed?: number;    // Twinkle/pulse delta per frame
+  angle?: number;         // Snowflake rotation angle (radians)
+  spin?: number;          // Snowflake rotational velocity
+  length?: number;        // Rain streak length (px)
 }
 
+/**
+ * ==============================================================================
+ * ATMOSPHERE CANVAS COMPONENT (GPU-Accelerated 2D Particle Simulation)
+ * ==============================================================================
+ * Renders an optimized procedural HTML5 Canvas 2D particle simulation behind
+ * the semi-transparent glassmorphic application shell.
+ *
+ * Atmospheric Effects Implemented:
+ * 1. Sunny Day: Floating sun motes with soft radial golden flares
+ * 2. Clear Night: Twinkling celestial stars with varying brightness
+ * 3. Rain & Drizzle: Angled rain velocity streaks with wind drift
+ * 4. Thunderstorm: Dense heavy rain vectors and periodic lightning flashes
+ * 5. Snow: Floating snowflakes with natural air resistance and gentle spin
+ * 6. Fog / Overcast: Drifting atmospheric ambient cloud puffs
+ *
+ * Respects user preferences: Full GPU, Reduced (Eco), or Off.
+ */
 export const AtmosphereCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { weatherData, settings } = useWeather();
@@ -45,10 +65,13 @@ export const AtmosphereCanvas: React.FC = () => {
     let width = window.innerWidth;
     let height = window.innerHeight;
 
+    /**
+     * Resizes canvas to match device pixel ratio without excessive memory usage
+     */
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      const dpr = window.devicePixelRatio > 1 ? 1.5 : 1;
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = width * dpr;
       canvas.height = height * dpr;
       ctx.resetTransform?.();
@@ -56,6 +79,9 @@ export const AtmosphereCanvas: React.FC = () => {
       spawnParticles();
     };
 
+    /**
+     * Initializes procedural particle arrays mapped to current condition
+     */
     const spawnParticles = () => {
       const isReduced = atmosphereMode === 'reduced';
       const factor = isReduced ? 0.35 : 1.0;
@@ -172,11 +198,13 @@ export const AtmosphereCanvas: React.FC = () => {
     resize();
     window.addEventListener('resize', resize, { passive: true });
 
-    // Render loop
+    /**
+     * Animation Frame Loop (60 FPS)
+     */
     const render = () => {
       ctx.clearRect(0, 0, width, height);
 
-      // Handle lightning flash
+      // Handle lightning illumination for thunderstorm conditions
       if (conditionCategory === 'thunderstorm') {
         const now = Date.now();
         if (now > lightningRef.current.nextTime) {
@@ -191,18 +219,18 @@ export const AtmosphereCanvas: React.FC = () => {
         }
       }
 
-      // Render Particles
+      // Render Individual Particles
       particlesRef.current.forEach(p => {
         p.x += p.vx;
         p.y += p.vy;
 
-        // Wrap around boundaries
+        // Wrap around viewport boundaries
         if (p.x < -100) p.x = width + 50;
         if (p.x > width + 100) p.x = -50;
         if (p.y > height + 50) p.y = -30;
         if (p.y < -50) p.y = height + 30;
 
-        // Pulse alpha
+        // Pulse opacity
         if (p.pulseSpeed) {
           p.alpha += p.pulseSpeed;
           if (p.alpha > (p.maxAlpha || 0.8) || p.alpha < 0.1) {
@@ -276,14 +304,8 @@ export const AtmosphereCanvas: React.FC = () => {
         aria-hidden="true"
         className="fixed inset-0 w-screen h-screen z-0 pointer-events-none opacity-85 transition-opacity duration-500"
       />
-      <div
-        className="weather-gradient-layer"
-        aria-hidden="true"
-      />
-      <div
-        className="weather-ambient-layer"
-        aria-hidden="true"
-      />
+      <div className="weather-gradient-layer" aria-hidden="true" />
+      <div className="weather-ambient-layer" aria-hidden="true" />
     </>
   );
 };

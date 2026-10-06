@@ -1,8 +1,18 @@
 import { Location, Settings } from '../types/weather';
 
+/**
+ * Global Application Configuration
+ *
+ * Defines application metadata, fallback geocoordinates, persistent storage keys,
+ * and default client preferences.
+ */
 export const CONFIG = {
   APP_NAME: 'Aura Weather',
   VERSION: '2.0.0',
+
+  /**
+   * Default fallback city initialized if no saved location or GPS permission exists.
+   */
   DEFAULT_CITY: {
     name: 'Lagos',
     country: 'Nigeria',
@@ -12,12 +22,20 @@ export const CONFIG = {
     longitude: 3.3792,
     timezone: 'Africa/Lagos'
   } as Location,
+
+  /**
+   * Default saved locations pre-populated for new users.
+   */
   DEFAULT_SAVED_LOCATIONS: [
     { name: 'Lagos', country: 'Nigeria', countryCode: 'NG', latitude: 6.5244, longitude: 3.3792, tag: 'Home' },
     { name: 'London', country: 'United Kingdom', countryCode: 'GB', latitude: 51.5074, longitude: -0.1278, tag: 'Work' },
     { name: 'Tokyo', country: 'Japan', countryCode: 'JP', latitude: 35.6762, longitude: 139.6503, tag: 'Favorite' },
     { name: 'New York', country: 'United States', countryCode: 'US', latitude: 40.7128, longitude: -74.0060, tag: 'Travel' }
   ] as Location[],
+
+  /**
+   * Default application preferences.
+   */
   DEFAULT_SETTINGS: {
     tempUnit: 'C',
     windUnit: 'km/h',
@@ -27,7 +45,15 @@ export const CONFIG = {
     atmosphere: 'full',
     provider: 'open-meteo'
   } as Settings,
+
+  /**
+   * Optional OpenWeatherMap API key fallback (Open-Meteo does not require a key).
+   */
   OPENWEATHER_API_KEY: process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY || '8c900f3e949f21d5afdab9d2e89ea5e4',
+
+  /**
+   * LocalStorage namespaces for cached state and user preferences.
+   */
   STORAGE_KEYS: {
     SETTINGS: 'aura_weather_settings_v2',
     SAVED_LOCATIONS: 'aura_weather_saved_locations_v2',
@@ -37,14 +63,28 @@ export const CONFIG = {
   }
 };
 
+/**
+ * WMO Weather Code Descriptor
+ */
 export interface WMOInfo {
+  /** Human-readable condition label (e.g. 'Clear Sky', 'Heavy Rain') */
   label: string;
+  /** High-level category for ambient lighting and theme background selection */
   category: 'clear' | 'clouds' | 'fog' | 'rain' | 'snow' | 'thunderstorm';
+  /** Base icon identifier */
   icon: string;
+  /** Daytime icon identifier */
   dayIcon: string;
+  /** Nighttime icon identifier */
   nightIcon: string;
 }
 
+/**
+ * World Meteorological Organization (WMO) Weather Interpretation Code Map
+ *
+ * Translates standard WMO codes (0 to 99) into human descriptions, day/night SVG icon
+ * tokens, and atmospheric theme categorization.
+ */
 export const WMO_CODES: Record<number, WMOInfo> = {
   0: { label: 'Clear Sky', category: 'clear', icon: 'sun', dayIcon: 'sun', nightIcon: 'moon' },
   1: { label: 'Mainly Clear', category: 'clear', icon: 'sun-cloud', dayIcon: 'sun-cloud', nightIcon: 'moon-cloud' },

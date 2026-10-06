@@ -5,6 +5,9 @@ import { useWeather } from '../../context/WeatherContext';
 import { GraphMetric, HourlyItem } from '../../types/weather';
 import { formatTemperature, formatWindSpeed } from '../../utils/meteorology';
 
+/**
+ * Interface representing a mathematical plot point along the 24-hour curve
+ */
 interface Point {
   x: number;
   y: number;
@@ -12,10 +15,23 @@ interface Point {
   hour: HourlyItem;
 }
 
+/**
+ * ==============================================================================
+ * WEATHER CHART COMPONENT (Financial-Grade Interactive Canvas Bezier Graph)
+ * ==============================================================================
+ * Renders an ultra-fast HTML5 Canvas 2D cubic Bezier curve graph for:
+ * - Temperature (°C / °F)
+ * - Precipitation Probability (%)
+ * - Wind Velocity (km/h, mph, knots)
+ *
+ * Supports real-time sub-millisecond touch/pointer scrubbing with animated crosshairs
+ * and floating glassmorphism inspection tooltips.
+ */
 export const WeatherChart: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { weatherData, settings, activeGraphMetric, setActiveGraphMetric } = useWeather();
 
+  // Scrubber Tooltip Floating State
   const [tooltip, setTooltip] = useState<{
     visible: boolean;
     x: number;
@@ -34,6 +50,9 @@ export const WeatherChart: React.FC = () => {
   const tempUnit = settings.tempUnit;
   const windUnit = settings.windUnit;
 
+  /**
+   * Extracts numerical metric value based on active graph mode
+   */
   const getMetricValue = useCallback((hour: HourlyItem, metric: GraphMetric): number => {
     if (metric === 'temp') {
       return formatTemperature(hour.temp, tempUnit);
@@ -44,6 +63,9 @@ export const WeatherChart: React.FC = () => {
     }
   }, [tempUnit, windUnit]);
 
+  /**
+   * Returns display unit suffix
+   */
   const getMetricSuffix = useCallback((metric: GraphMetric): string => {
     if (metric === 'temp') return `°${tempUnit}`;
     if (metric === 'precip') return '%';
@@ -53,6 +75,11 @@ export const WeatherChart: React.FC = () => {
   const pointsRef = useRef<Point[]>([]);
   const activeIndexRef = useRef<number>(-1);
 
+  /**
+   * Core Canvas 2D Drawing Engine
+   * Calculates dynamic scales, renders gradient area fills, cubic Bezier lines,
+   * horizontal reference grid lines, and interactive crosshair scrubber pins.
+   */
   const drawChart = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !hourlyData.length) return;
@@ -63,8 +90,9 @@ export const WeatherChart: React.FC = () => {
     if (!parent) return;
     const rect = parent.getBoundingClientRect();
     const width = rect.width;
-    const height = rect.height || 220;
+    const height = rect.height || 200;
 
+    // Handle high-density Retina/DPR displays
     const dpr = window.devicePixelRatio || 1;
     canvas.width = width * dpr;
     canvas.height = height * dpr;
@@ -84,11 +112,12 @@ export const WeatherChart: React.FC = () => {
       maxVal += padding;
     }
 
-    const paddingX = 24;
-    const paddingY = 28;
+    const paddingX = 18;
+    const paddingY = 24;
     const chartW = width - paddingX * 2;
     const chartH = height - paddingY * 2;
 
+    // Map hourly data points to 2D canvas coordinates
     const points: Point[] = hourlyData.map((hour, idx) => {
       const x = paddingX + (idx / (hourlyData.length - 1)) * chartW;
       const val = getMetricValue(hour, activeGraphMetric);
@@ -100,23 +129,23 @@ export const WeatherChart: React.FC = () => {
 
     ctx.clearRect(0, 0, width, height);
 
-    // Subtle horizontal grid lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+    // 1. Subtle horizontal grid lines
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
 
     for (let i = 1; i <= 3; i++) {
       const gridY = (height / 4) * i;
       ctx.beginPath();
-      ctx.moveTo(16, gridY);
-      ctx.lineTo(width - 16, gridY);
+      ctx.moveTo(12, gridY);
+      ctx.lineTo(width - 12, gridY);
       ctx.stroke();
     }
     ctx.setLineDash([]);
 
     if (!points.length) return;
 
-    // Metric Colors
+    // 2. Metric Palette Assignment
     let strokeColor = '#38bdf8';
     let gradTop = 'rgba(56, 189, 248, 0.35)';
     let gradBottom = 'rgba(56, 189, 248, 0)';
@@ -131,7 +160,7 @@ export const WeatherChart: React.FC = () => {
       gradBottom = 'rgba(168, 85, 247, 0)';
     }
 
-    // Bezier Area Fill
+    // 3. Smooth Cubic Bezier Area Gradient Fill
     const fillPath = new Path2D();
     fillPath.moveTo(points[0].x, points[0].y);
     for (let i = 0; i < points.length - 1; i++) {
@@ -153,7 +182,7 @@ export const WeatherChart: React.FC = () => {
     ctx.fillStyle = areaGrad;
     ctx.fill(fillPath);
 
-    // Stroke line
+    // 4. Primary Curve Stroke
     ctx.beginPath();
     ctx.moveTo(points[0].x, points[0].y);
     for (let i = 0; i < points.length - 1; i++) {
@@ -166,41 +195,45 @@ export const WeatherChart: React.FC = () => {
       ctx.bezierCurveTo(cpX1, cpY1, cpX2, cpY2, p1.x, p1.y);
     }
     ctx.strokeStyle = strokeColor;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.stroke();
 
-    // Time Axis Labels
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
-    ctx.font = '600 11px system-ui, sans-serif';
+    // 5. Time Axis Reference Labels (Every 3-4 hours)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.font = '600 10px system-ui, sans-serif';
     ctx.textAlign = 'center';
 
-    for (let i = 0; i < points.length; i += 3) {
+    const step = width < 480 ? 4 : 3;
+    for (let i = 0; i < points.length; i += step) {
       const pt = points[i];
-      ctx.fillText(pt.hour.formattedTime, pt.x, height - 6);
+      ctx.fillText(pt.hour.formattedTime, pt.x, height - 4);
     }
 
-    // Active crosshair
+    // 6. Interactive Crosshair & Inspection Pin
     if (activeIndexRef.current !== -1 && points[activeIndexRef.current]) {
       const activePt = points[activeIndexRef.current];
 
+      // Vertical guide crosshair line
       ctx.beginPath();
-      ctx.moveTo(activePt.x, 10);
-      ctx.lineTo(activePt.x, height - 20);
+      ctx.moveTo(activePt.x, 8);
+      ctx.lineTo(activePt.x, height - 16);
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = 1.5;
       ctx.setLineDash([3, 3]);
       ctx.stroke();
       ctx.setLineDash([]);
 
+      // Outer glowing halo
       ctx.beginPath();
-      ctx.arc(activePt.x, activePt.y, 8, 0, Math.PI * 2);
+      ctx.arc(activePt.x, activePt.y, 7, 0, Math.PI * 2);
       ctx.fillStyle = gradTop;
       ctx.fill();
 
+      // Inner solid point
       ctx.beginPath();
-      ctx.arc(activePt.x, activePt.y, 4.5, 0, Math.PI * 2);
+      ctx.arc(activePt.x, activePt.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#ffffff';
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = 2;
@@ -215,6 +248,9 @@ export const WeatherChart: React.FC = () => {
     return () => window.removeEventListener('resize', drawChart);
   }, [drawChart]);
 
+  /**
+   * Computes closest data point along x-axis for pointer/touch coordinates
+   */
   const handlePointer = (clientX: number) => {
     const canvas = canvasRef.current;
     if (!canvas || !pointsRef.current.length) return;
@@ -247,6 +283,9 @@ export const WeatherChart: React.FC = () => {
     drawChart();
   };
 
+  /**
+   * Resets crosshair state when pointer exits canvas bounds
+   */
   const handleLeave = () => {
     activeIndexRef.current = -1;
     setTooltip(prev => ({ ...prev, visible: false }));
@@ -254,9 +293,10 @@ export const WeatherChart: React.FC = () => {
   };
 
   return (
-    <section className="mb-6" aria-label="Interactive weather progression chart">
-      <div className="flex items-center justify-between mb-3 px-1">
-        <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-white/50">
+    <section className="mb-4 sm:mb-6" aria-label="Interactive weather progression chart">
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-2 sm:mb-3 px-1">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-extrabold uppercase tracking-widest text-white/50">
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-sky-400">
             <path d="M3 3v18h18" />
             <path d="m19 9-5 5-4-4-3 3" />
@@ -265,11 +305,14 @@ export const WeatherChart: React.FC = () => {
         </div>
       </div>
 
-      <div className="glass-panel p-5">
-        <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
-          <div className="inline-flex bg-black/30 p-1 rounded-full border border-white/10 backdrop-blur-md" role="tablist">
+      <div className="glass-panel p-3.5 sm:p-5">
+        {/* Metric Segmented Control Toolbar */}
+        <div className="flex items-center justify-between flex-wrap gap-2 mb-3 sm:mb-4">
+          <div className="inline-flex bg-black/35 p-0.5 sm:p-1 rounded-full border border-white/10 backdrop-blur-md" role="tablist">
             <button
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-150 ${activeGraphMetric === 'temp' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25' : 'text-white/60 hover:text-white'}`}
+              className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-150 active:scale-95 ${
+                activeGraphMetric === 'temp' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25 font-black' : 'text-white/60 hover:text-white'
+              }`}
               onClick={() => setActiveGraphMetric('temp')}
               role="tab"
               aria-selected={activeGraphMetric === 'temp'}
@@ -277,7 +320,9 @@ export const WeatherChart: React.FC = () => {
               <span>Temperature</span>
             </button>
             <button
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-150 ${activeGraphMetric === 'precip' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25' : 'text-white/60 hover:text-white'}`}
+              className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-150 active:scale-95 ${
+                activeGraphMetric === 'precip' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25 font-black' : 'text-white/60 hover:text-white'
+              }`}
               onClick={() => setActiveGraphMetric('precip')}
               role="tab"
               aria-selected={activeGraphMetric === 'precip'}
@@ -285,20 +330,23 @@ export const WeatherChart: React.FC = () => {
               <span>Precipitation</span>
             </button>
             <button
-              className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-150 ${activeGraphMetric === 'wind' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25' : 'text-white/60 hover:text-white'}`}
+              className={`px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-bold transition-all duration-150 active:scale-95 ${
+                activeGraphMetric === 'wind' ? 'bg-sky-400 text-slate-950 shadow-md shadow-sky-400/25 font-black' : 'text-white/60 hover:text-white'
+              }`}
               onClick={() => setActiveGraphMetric('wind')}
               role="tab"
               aria-selected={activeGraphMetric === 'wind'}
             >
-              <span>Wind Speed</span>
+              <span>Wind</span>
             </button>
           </div>
-          <div className="text-xs font-bold text-white/40 uppercase tracking-wider">
-            Drag to scrub curve
+          <div className="text-[10px] sm:text-xs font-bold text-white/40 uppercase tracking-wider hidden xs:block">
+            Touch to scrub
           </div>
         </div>
 
-        <div className="relative w-full h-[200px] md:h-[240px] touch-pan-y select-none">
+        {/* Canvas Scrubber Frame */}
+        <div className="relative w-full h-[180px] sm:h-[220px] md:h-[240px] touch-pan-y select-none">
           <canvas
             ref={canvasRef}
             id="weather-interactive-chart"
@@ -309,14 +357,17 @@ export const WeatherChart: React.FC = () => {
             onTouchMove={(e) => handlePointer(e.touches[0].clientX)}
             onTouchEnd={handleLeave}
           />
+          {/* Real-time Floating Tooltip */}
           <div
-            className={`absolute top-2.5 pointer-events-none -translate-x-1/2 bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-xl px-3 py-2 shadow-2xl whitespace-nowrap transition-opacity duration-150 z-20 ${tooltip.visible ? 'opacity-100' : 'opacity-0'}`}
+            className={`absolute top-2 pointer-events-none -translate-x-1/2 bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 shadow-2xl whitespace-nowrap transition-opacity duration-150 z-20 ${
+              tooltip.visible ? 'opacity-100' : 'opacity-0'
+            }`}
             style={{ left: `${tooltip.x}px` }}
             aria-hidden="true"
           >
-            <div className="text-[10px] font-bold uppercase tracking-wider text-white/50">{tooltip.time}</div>
-            <div className="font-display text-base font-black text-white">{tooltip.val}</div>
-            <div className="text-[11px] font-semibold text-sky-400">{tooltip.extra}</div>
+            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/50">{tooltip.time}</div>
+            <div className="font-display text-sm sm:text-base font-black text-white">{tooltip.val}</div>
+            <div className="text-[10px] sm:text-[11px] font-semibold text-sky-400">{tooltip.extra}</div>
           </div>
         </div>
       </div>

@@ -1,3 +1,18 @@
+/**
+ * Storage Utilities
+ *
+ * Provides SSR-safe wrappers around the Web Storage API (localStorage)
+ * with robust error handling, schema serialization, and default fallbacks.
+ */
+
+/**
+ * Safely reads and deserializes a JSON value from localStorage.
+ *
+ * @template T
+ * @param {string} key - The localStorage item key.
+ * @param {T} fallback - The default fallback value returned if retrieval or parsing fails.
+ * @returns {T} The parsed object or the fallback value.
+ */
 export function getStoredJSON<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
   try {
@@ -9,6 +24,14 @@ export function getStoredJSON<T>(key: string, fallback: T): T {
   }
 }
 
+/**
+ * Safely serializes and persists a value to localStorage.
+ *
+ * @template T
+ * @param {string} key - The localStorage item key.
+ * @param {T} data - The data to serialize and store.
+ * @returns {void}
+ */
 export function setStoredJSON<T>(key: string, data: T): void {
   if (typeof window === 'undefined') return;
   try {

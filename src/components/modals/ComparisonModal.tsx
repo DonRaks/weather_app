@@ -6,6 +6,27 @@ import { WeatherData } from '../../types/weather';
 import { formatTemperature, formatWindSpeed } from '../../utils/meteorology';
 import { WeatherAPI } from '../../services/weatherApi';
 
+/**
+ * ComparisonModal Component
+ *
+ * Provides a side-by-side differential meteorological comparison between any two saved locations.
+ * Fetches real-time telemetry for both cities concurrently via `Promise.all` and visualizes:
+ * - Temperature variance
+ * - Atmospheric condition descriptions
+ * - Rain probability differentials
+ * - Relative humidity balance
+ * - Wind velocity contrast
+ * - UV radiation exposure levels
+ * - Air Quality Index (AQI) rating & status
+ *
+ * Mobile Optimization:
+ * - Compact selector controls (`text-xs sm:text-sm`),
+ * - Touch-friendly padding (`p-3 sm:p-5`),
+ * - Responsive comparison meter bars that scale accurately from 320px to wide desktops.
+ *
+ * @component
+ * @returns {React.ReactElement | null} The rendered comparison dialog or null when closed.
+ */
 export const ComparisonModal: React.FC = () => {
   const { isCompareOpen, setCompareOpen, savedLocations, settings } = useWeather();
   const [indexA, setIndexA] = useState<number>(0);
@@ -17,6 +38,7 @@ export const ComparisonModal: React.FC = () => {
   const cityA = savedLocations[indexA] || savedLocations[0];
   const cityB = savedLocations[indexB] || savedLocations[Math.min(1, savedLocations.length - 1)];
 
+  // Fetch telemetry for both target cities when modal is active
   useEffect(() => {
     if (!isCompareOpen || !cityA || !cityB) return;
 
@@ -53,6 +75,7 @@ export const ComparisonModal: React.FC = () => {
   const tempUnit = settings.tempUnit;
   const windUnit = settings.windUnit;
 
+  // Comparative metric matrix
   const metrics = (dataA && dataB) ? [
     {
       name: 'Temperature',
@@ -107,7 +130,7 @@ export const ComparisonModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-md z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in"
+      className="fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-md z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) setCompareOpen(false);
       }}
@@ -115,9 +138,10 @@ export const ComparisonModal: React.FC = () => {
       aria-modal="true"
       aria-label="City Weather Comparison"
     >
-      <div className="w-full max-w-xl bg-slate-900/95 dark:bg-slate-950/95 border border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 mt-8 sm:mt-16 flex flex-col gap-4 animate-slide-up backdrop-blur-2xl">
+      <div className="w-full max-w-xl bg-slate-900/95 dark:bg-slate-950/95 border border-white/15 rounded-3xl shadow-2xl p-4 sm:p-6 mt-4 sm:mt-16 flex flex-col gap-4 animate-slide-up backdrop-blur-2xl">
+        {/* Modal Header */}
         <div className="flex justify-between items-center border-b border-white/10 pb-3">
-          <h2 className="text-lg sm:text-xl font-black text-white">Comparative Differential Analysis</h2>
+          <h2 className="text-base sm:text-xl font-black text-white">Comparative Differential Analysis</h2>
           <button
             className="glass-btn w-8 h-8 text-white/60 hover:text-white"
             onClick={() => setCompareOpen(false)}
@@ -128,11 +152,12 @@ export const ComparisonModal: React.FC = () => {
         </div>
 
         {/* City Selectors */}
-        <div className="grid grid-cols-[1fr_40px_1fr] items-center gap-2 my-2">
+        <div className="grid grid-cols-[1fr_36px_1fr] sm:grid-cols-[1fr_40px_1fr] items-center gap-2 my-1 sm:my-2">
           <select
-            className="w-full p-2.5 sm:p-3 rounded-2xl bg-black/40 border border-white/15 text-white font-bold text-xs sm:text-sm outline-none cursor-pointer focus:border-sky-400"
+            className="w-full p-2 sm:p-3 rounded-2xl bg-black/40 border border-white/15 text-white font-bold text-xs sm:text-sm outline-none cursor-pointer focus:border-sky-400 truncate"
             value={indexA}
             onChange={(e) => setIndexA(parseInt(e.target.value, 10))}
+            aria-label="First location to compare"
           >
             {savedLocations.map((loc, idx) => (
               <option key={idx} value={idx} className="bg-slate-900 text-white">
@@ -141,14 +166,15 @@ export const ComparisonModal: React.FC = () => {
             ))}
           </select>
 
-          <div className="w-8 h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/60 text-xs font-black mx-auto">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/10 border border-white/15 flex items-center justify-center text-white/60 text-[10px] sm:text-xs font-black mx-auto">
             VS
           </div>
 
           <select
-            className="w-full p-2.5 sm:p-3 rounded-2xl bg-black/40 border border-white/15 text-white font-bold text-xs sm:text-sm outline-none cursor-pointer focus:border-indigo-400"
+            className="w-full p-2 sm:p-3 rounded-2xl bg-black/40 border border-white/15 text-white font-bold text-xs sm:text-sm outline-none cursor-pointer focus:border-indigo-400 truncate"
             value={indexB}
             onChange={(e) => setIndexB(parseInt(e.target.value, 10))}
+            aria-label="Second location to compare"
           >
             {savedLocations.map((loc, idx) => (
               <option key={idx} value={idx} className="bg-slate-900 text-white">
@@ -158,12 +184,13 @@ export const ComparisonModal: React.FC = () => {
           </select>
         </div>
 
+        {/* Comparative Status / Results */}
         {isLoading ? (
-          <div className="py-8 text-center text-sm font-semibold text-white/50">
+          <div className="py-8 text-center text-xs sm:text-sm font-semibold text-white/50 animate-pulse">
             Comparing atmospheric telemetry for both locations...
           </div>
         ) : (
-          <div className="flex flex-col gap-3 my-2">
+          <div className="flex flex-col gap-3 my-1">
             {metrics.map((m, idx) => {
               const sum = (Math.abs(m.rawA) + Math.abs(m.rawB)) || 1;
               const pctA = Math.max(15, Math.min(85, (Math.abs(m.rawA) / sum) * 100));
@@ -172,9 +199,11 @@ export const ComparisonModal: React.FC = () => {
               return (
                 <div key={idx} className="flex flex-col gap-1">
                   <div className="flex justify-between items-center text-xs font-bold">
-                    <span className="text-sky-400 font-extrabold">{m.valA}</span>
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/40">{m.name}</span>
-                    <span className="text-indigo-400 font-extrabold">{m.valB}</span>
+                    <span className="text-sky-400 font-extrabold truncate max-w-[40%]">{m.valA}</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/40 flex-shrink-0 px-1">
+                      {m.name}
+                    </span>
+                    <span className="text-indigo-400 font-extrabold text-right truncate max-w-[40%]">{m.valB}</span>
                   </div>
                   <div className="flex h-2 rounded-full bg-white/10 overflow-hidden gap-0.5">
                     <div className="bg-sky-400 h-full rounded-l-full transition-all duration-300" style={{ width: `${pctA}%` }} />

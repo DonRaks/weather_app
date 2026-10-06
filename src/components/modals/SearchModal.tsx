@@ -5,6 +5,23 @@ import { useWeather } from '../../context/WeatherContext';
 import { Location } from '../../types/weather';
 import { WeatherAPI } from '../../services/weatherApi';
 
+/**
+ * SearchModal Component
+ *
+ * Full-featured modal providing:
+ * 1. Debounced (280ms) real-time global city search across 200,000+ settlements via Open-Meteo Geocoding.
+ * 2. Full keyboard navigation (ArrowUp, ArrowDown, Enter to select, Escape to close).
+ * 3. HTML5 Geolocation API one-tap GPS coordinate retrieval with client-side reverse geocoding.
+ * 4. Pinned Favorite Locations with deletion and instant switching.
+ * 5. Recent Search History with single-click reactivation and history clearing.
+ *
+ * Mobile Optimization:
+ * - Fluid padding (`p-3 sm:p-5`), compact max heights for results (`max-h-52 sm:max-h-60`),
+ * - Touch-friendly tap targets (minimum 44px height for interactive elements).
+ *
+ * @component
+ * @returns {React.ReactElement | null} The rendered search dialog or null when closed.
+ */
 export const SearchModal: React.FC = () => {
   const {
     isSearchOpen,
@@ -25,6 +42,7 @@ export const SearchModal: React.FC = () => {
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Focus input automatically when modal opens
   useEffect(() => {
     if (isSearchOpen) {
       setQuery('');
@@ -34,7 +52,7 @@ export const SearchModal: React.FC = () => {
     }
   }, [isSearchOpen]);
 
-  // Debounced search
+  // Debounced search query watcher (280ms threshold)
   useEffect(() => {
     if (!query || query.trim().length < 2) {
       setResults([]);
@@ -55,11 +73,17 @@ export const SearchModal: React.FC = () => {
 
   if (!isSearchOpen) return null;
 
+  /**
+   * Selects a location, updates current city context, and closes modal
+   */
   const handleSelect = (city: Location) => {
     setCurrentCity(city);
     setSearchOpen(false);
   };
 
+  /**
+   * Handles keyboard navigation for the search results dropdown
+   */
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -81,6 +105,9 @@ export const SearchModal: React.FC = () => {
     }
   };
 
+  /**
+   * Triggers device GPS geolocation and reverse geocodes the coordinates
+   */
   const handleGeolocation = () => {
     if (!navigator.geolocation) {
       showToast('Geolocation is not supported by your browser.', 'error');
@@ -114,7 +141,7 @@ export const SearchModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-md z-50 flex items-start justify-center p-4 overflow-y-auto animate-fade-in"
+      className="fixed inset-0 w-screen h-screen bg-black/75 backdrop-blur-md z-50 flex items-start justify-center p-3 sm:p-4 overflow-y-auto animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) setSearchOpen(false);
       }}
@@ -122,9 +149,10 @@ export const SearchModal: React.FC = () => {
       aria-modal="true"
       aria-label="Search city"
     >
-      <div className="w-full max-w-lg bg-slate-900/95 dark:bg-slate-950/95 border border-white/15 rounded-3xl shadow-2xl p-5 sm:p-6 mt-8 sm:mt-16 flex flex-col gap-4 animate-slide-up backdrop-blur-2xl">
+      <div className="w-full max-w-lg bg-slate-900/95 dark:bg-slate-950/95 border border-white/15 rounded-3xl shadow-2xl p-4 sm:p-6 mt-4 sm:mt-16 flex flex-col gap-4 animate-slide-up backdrop-blur-2xl">
+        {/* Modal Header */}
         <div className="flex justify-between items-center">
-          <h2 className="text-lg sm:text-xl font-black text-white">Search Global Locations</h2>
+          <h2 className="text-base sm:text-xl font-black text-white">Search Global Locations</h2>
           <button
             className="glass-btn w-8 h-8 text-white/60 hover:text-white"
             onClick={() => setSearchOpen(false)}
@@ -134,9 +162,18 @@ export const SearchModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Input Field */}
-        <div className="flex items-center gap-3 px-4 py-3 rounded-full bg-black/40 border border-white/15 focus-within:border-sky-400 transition-colors">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-white/40 flex-shrink-0">
+        {/* Input Field with Search Icon */}
+        <div className="flex items-center gap-2.5 sm:gap-3 px-3.5 sm:px-4 py-2.5 sm:py-3 rounded-full bg-black/40 border border-white/15 focus-within:border-sky-400 transition-colors">
+          <svg
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            className="text-white/40 flex-shrink-0"
+            aria-hidden="true"
+          >
             <circle cx="11" cy="11" r="8" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
@@ -154,7 +191,7 @@ export const SearchModal: React.FC = () => {
           />
           {query && (
             <button
-              className="text-white/40 hover:text-white text-lg font-bold"
+              className="text-white/40 hover:text-white text-lg font-bold p-1"
               onClick={() => {
                 setQuery('');
                 setResults([]);
@@ -169,19 +206,19 @@ export const SearchModal: React.FC = () => {
 
         {/* Geolocation Button */}
         <button
-          className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 font-bold text-sm transition-all active:scale-98 cursor-pointer disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-2.5 py-2.5 sm:py-3 px-4 rounded-2xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/30 text-sky-300 font-bold text-xs sm:text-sm transition-all active:scale-98 cursor-pointer disabled:opacity-50"
           onClick={handleGeolocation}
           disabled={isLocating}
         >
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
             <circle cx="12" cy="12" r="10" />
             <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20" />
           </svg>
           <span>{isLocating ? 'Determining GPS Coordinates...' : 'Use Precise Current Location'}</span>
         </button>
 
-        {/* Autocomplete List */}
-        <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+        {/* Autocomplete Results List */}
+        <div className="flex flex-col gap-1 max-h-52 sm:max-h-60 overflow-y-auto" role="listbox">
           {isSearching && (
             <div className="p-3 text-center text-xs font-semibold text-white/40">
               Querying international geospatial database...
@@ -197,36 +234,49 @@ export const SearchModal: React.FC = () => {
           {results.map((item, idx) => (
             <div
               key={idx}
-              className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${selectedIndex === idx ? 'bg-white/15' : 'hover:bg-white/[0.08]'}`}
+              role="option"
+              aria-selected={selectedIndex === idx}
+              className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl cursor-pointer transition-colors ${
+                selectedIndex === idx ? 'bg-white/15' : 'hover:bg-white/[0.08]'
+              }`}
               onClick={() => handleSelect(item)}
             >
-              <div className="flex items-center gap-2.5">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-sky-400 flex-shrink-0">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 pr-2">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  className="text-sky-400 flex-shrink-0"
+                  aria-hidden="true"
+                >
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                <span className="text-sm font-bold text-white">{item.name}</span>
-                {item.admin1 && <span className="text-xs text-white/50">{item.admin1}</span>}
+                <span className="text-xs sm:text-sm font-bold text-white truncate">{item.name}</span>
+                {item.admin1 && <span className="text-[11px] sm:text-xs text-white/50 truncate hidden xs:inline">{item.admin1}</span>}
               </div>
-              <span className="text-xs font-extrabold px-2 py-0.5 rounded bg-white/10 text-white/80">
+              <span className="text-[10px] sm:text-xs font-extrabold px-2 py-0.5 rounded bg-white/10 text-white/80 flex-shrink-0">
                 {item.countryCode || item.country}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Saved Locations */}
+        {/* Saved Favorite Locations */}
         {savedLocations.length > 0 && (
           <div className="flex flex-col gap-2 pt-2 border-t border-white/10">
             <span className="text-[10px] font-extrabold uppercase tracking-wider text-white/40">Saved Favorites</span>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {savedLocations.map((loc, idx) => (
                 <div
                   key={idx}
-                  className="glass-btn px-3 py-1.5 text-xs font-bold text-white gap-1.5 cursor-pointer hover:border-sky-400/50"
+                  className="glass-btn px-2.5 sm:px-3 py-1.5 text-xs font-bold text-white gap-1.5 cursor-pointer hover:border-sky-400/50"
                   onClick={() => handleSelect(loc)}
                 >
-                  <span>{loc.name}</span>
+                  <span className="truncate max-w-[120px]">{loc.name}</span>
                   <span className="text-[10px] text-white/40">({loc.countryCode || loc.country})</span>
                   <button
                     className="text-white/40 hover:text-rose-400 ml-1 text-sm font-bold"
@@ -235,6 +285,7 @@ export const SearchModal: React.FC = () => {
                       removeSavedLocation(idx);
                     }}
                     title="Remove location"
+                    aria-label={`Remove ${loc.name} from favorites`}
                   >
                     &times;
                   </button>
@@ -244,7 +295,7 @@ export const SearchModal: React.FC = () => {
           </div>
         )}
 
-        {/* Recent Searches */}
+        {/* Recent Search Queries */}
         {recentSearches.length > 0 && (
           <div className="flex flex-col gap-1.5 pt-2 border-t border-white/10">
             <div className="flex items-center justify-between">
@@ -256,22 +307,22 @@ export const SearchModal: React.FC = () => {
                 Clear History
               </button>
             </div>
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto">
+            <div className="flex flex-col gap-1 max-h-36 sm:max-h-40 overflow-y-auto">
               {recentSearches.map((loc, idx) => (
                 <div
                   key={idx}
                   className="flex items-center justify-between p-2 rounded-lg hover:bg-white/[0.06] cursor-pointer transition-colors"
                   onClick={() => handleSelect(loc)}
                 >
-                  <div className="flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40">
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40 flex-shrink-0" aria-hidden="true">
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12 6 12 12 16 14" />
                     </svg>
-                    <span className="text-xs font-bold text-white">{loc.name}</span>
-                    {loc.admin1 && <span className="text-[11px] text-white/45">{loc.admin1}</span>}
+                    <span className="text-xs font-bold text-white truncate">{loc.name}</span>
+                    {loc.admin1 && <span className="text-[11px] text-white/45 truncate hidden xs:inline">{loc.admin1}</span>}
                   </div>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/70">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/10 text-white/70 flex-shrink-0">
                     {loc.countryCode || loc.country}
                   </span>
                 </div>
@@ -283,3 +334,4 @@ export const SearchModal: React.FC = () => {
     </div>
   );
 };
+

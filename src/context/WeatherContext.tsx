@@ -6,43 +6,89 @@ import { CONFIG } from '../utils/constants';
 import { getStoredJSON, setStoredJSON } from '../utils/storage';
 import { WeatherAPI } from '../services/weatherApi';
 
+/**
+ * WeatherContext Type Definition
+ *
+ * Defines the complete state contract and action dispatches for the Aura Weather application.
+ */
 interface WeatherContextType {
+  /** The currently active target location */
   currentCity: Location;
+  /** Full meteorological data payload for the active location */
   weatherData: WeatherData | null;
+  /** Optional secondary location selected for comparison */
   comparisonCity: Location | null;
+  /** Telemetry data payload for the comparison location */
   comparisonData: WeatherData | null;
+  /** User configurable settings and preferences */
   settings: Settings;
+  /** Saved favorite locations */
   savedLocations: Location[];
+  /** Search history */
   recentSearches: Location[];
+  /** The active metric displayed on the trend chart ('temp' | 'precip' | 'wind' | 'humidity' | 'uv') */
   activeGraphMetric: GraphMetric;
+  /** The index of the selected hour in the 24-hour timeline inspector */
   selectedHourIndex: number;
+  /** Global loading state */
   isLoading: boolean;
+  /** Global error message or null */
   error: string | null;
+
+  /** Search modal visibility state */
   isSearchOpen: boolean;
+  /** Settings modal visibility state */
   isSettingsOpen: boolean;
+  /** Comparison modal visibility state */
   isCompareOpen: boolean;
+  /** Toast notifications queue */
   toasts: ToastMessage[];
 
-  // Actions
+  // Action Dispatchers
+  /** Sets the active city, updates storage, and fetches latest telemetry */
   setCurrentCity: (city: Location) => void;
+  /** Updates application preferences in state and local storage */
   updateSettings: (newSettings: Partial<Settings>) => void;
+  /** Quick toggle between Celsius and Fahrenheit */
   toggleTempUnit: () => void;
+  /** Adds a location to the user's saved favorites */
   addSavedLocation: (city: Location, tag?: string) => void;
+  /** Removes a location from saved favorites by index */
   removeSavedLocation: (index: number) => void;
+  /** Clears the user's recent search history */
   clearRecentSearches: () => void;
+  /** Updates the active trend chart metric */
   setActiveGraphMetric: (metric: GraphMetric) => void;
+  /** Updates the selected hour in the hourly inspector */
   setSelectedHourIndex: (index: number) => void;
+  /** Controls search modal visibility */
   setSearchOpen: (open: boolean) => void;
+  /** Controls settings modal visibility */
   setSettingsOpen: (open: boolean) => void;
+  /** Controls comparison modal visibility */
   setCompareOpen: (open: boolean) => void;
+  /** Dispatches a floating toast notification */
   showToast: (message: string, type?: 'info' | 'success' | 'error') => void;
+  /** Dismisses a toast notification by ID */
   removeToast: (id: string) => void;
+  /** Refreshes current city telemetry from live APIs */
   refreshWeather: () => Promise<void>;
+  /** Fetches weather for comparison city */
   fetchComparisonWeather: (city: Location) => Promise<WeatherData | null>;
 }
 
 const WeatherContext = createContext<WeatherContextType | undefined>(undefined);
 
+/**
+ * WeatherProvider Component
+ *
+ * Provides centralized state management, data persistence, network synchronization,
+ * theme management, and DOM attribute reflection for Aura Weather.
+ *
+ * @component
+ * @param {{ children: ReactNode }} props - React component children.
+ * @returns {React.ReactElement} The Context Provider wrapping children.
+ */
 export const WeatherProvider = ({ children }: { children: ReactNode }) => {
   const [currentCity, setCurrentCityState] = useState<Location>(CONFIG.DEFAULT_CITY);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
@@ -74,7 +120,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     setCurrentCityState(storedLast);
   }, []);
 
-  // Sync theme attribute to HTML tag
+  // Sync theme attribute to HTML document root
   useEffect(() => {
     if (typeof document === 'undefined') return;
     if (settings.theme === 'system') {
@@ -85,7 +131,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [settings.theme]);
 
-  // Sync weather data condition to HTML data-weather
+  // Sync active weather condition category to HTML document root for ambient shader lighting
   useEffect(() => {
     if (typeof document === 'undefined' || !weatherData) return;
     const cur = weatherData.current;
@@ -108,7 +154,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     document.documentElement.setAttribute('data-weather', condKey);
   }, [weatherData]);
 
-  // Toast notifications handler
+  // Toast notification dispatcher with auto-dismissal
   const showToast = useCallback((message: string, type: 'info' | 'success' | 'error' = 'info') => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
@@ -122,7 +168,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  // Fetch city weather
+  // Loads weather telemetry for a target location
   const loadCityWeather = useCallback(async (city: Location) => {
     setIsLoading(true);
     setError(null);
@@ -141,12 +187,12 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [showToast]);
 
-  // Handle current city change
+  // Handle active city selection
   const setCurrentCity = useCallback((city: Location) => {
     setCurrentCityState(city);
     setStoredJSON(CONFIG.STORAGE_KEYS.LAST_LOCATION, city);
 
-    // Update recent searches
+    // Update recent searches list (max 8 items, deduplicated)
     setRecentSearches(prev => {
       const filtered = prev.filter(
         item => !(item.name === city.name && item.country === city.country)
@@ -159,7 +205,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     loadCityWeather(city);
   }, [loadCityWeather]);
 
-  // Refresh current city
+  // Refresh active location data
   const refreshWeather = useCallback(async () => {
     await loadCityWeather(currentCity);
   }, [currentCity, loadCityWeather]);
@@ -177,12 +223,12 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Initial load
+  // Initial load on mount or coordinate shift
   useEffect(() => {
     loadCityWeather(currentCity);
   }, [currentCity.latitude, currentCity.longitude]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Settings update
+  // Preferences update handler
   const updateSettings = useCallback((newSettings: Partial<Settings>) => {
     setSettings(prev => {
       const updated = { ...prev, ...newSettings };
@@ -195,7 +241,7 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
     updateSettings({ tempUnit: settings.tempUnit === 'C' ? 'F' : 'C' });
   }, [settings.tempUnit, updateSettings]);
 
-  // Saved locations
+  // Saved location favorites handler
   const addSavedLocation = useCallback((city: Location, tag = 'Favorite') => {
     setSavedLocations(prev => {
       const exists = prev.some(
@@ -264,6 +310,12 @@ export const WeatherProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+/**
+ * Custom hook to access the Aura Weather context.
+ *
+ * @throws {Error} If called outside of a `<WeatherProvider />` tree.
+ * @returns {WeatherContextType} The active weather context state and actions.
+ */
 export const useWeather = () => {
   const context = useContext(WeatherContext);
   if (!context) {

@@ -3,6 +3,13 @@
 import React from 'react';
 import { useWeather } from '../../context/WeatherContext';
 
+/**
+ * ==============================================================================
+ * UV GAUGE MODULE (Solar Radiation & Skin Protection Advisor)
+ * ==============================================================================
+ * Visualizes the current UV radiation index with a spectrum bar (Low -> Extreme)
+ * and outputs deterministic health recommendations based on WHO UV index guidance.
+ */
 export const UVGauge: React.FC = () => {
   const { weatherData } = useWeather();
   if (!weatherData) return null;
@@ -28,9 +35,10 @@ export const UVGauge: React.FC = () => {
   }
 
   return (
-    <div className="glass-panel p-5 flex flex-col justify-between min-h-[190px]">
+    <div className="glass-panel p-4 sm:p-5 flex flex-col justify-between min-h-[180px] sm:min-h-[190px]">
+      {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <span className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-white/50">
+        <span className="flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-white/50">
           <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" className="text-amber-400">
             <circle cx="12" cy="12" r="5" />
             <line x1="12" y1="1" x2="12" y2="3" />
@@ -49,9 +57,10 @@ export const UVGauge: React.FC = () => {
         </span>
       </div>
 
+      {/* Numerical Value & Color Spectrum Bar */}
       <div className="flex flex-col my-1">
-        <div className="font-display text-3xl font-black text-white">{uv}</div>
-        <div className="h-2 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 via-rose-500 to-purple-500 relative my-3">
+        <div className="font-display text-2xl sm:text-3xl font-black text-white">{uv}</div>
+        <div className="h-2 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 via-rose-500 to-purple-500 relative my-2.5 sm:my-3">
           <div
             className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-900 shadow-md transition-all duration-300"
             style={{ left: `${percent}%` }}
@@ -59,7 +68,8 @@ export const UVGauge: React.FC = () => {
         </div>
       </div>
 
-      <p className="text-xs font-medium text-white/60 leading-relaxed mt-auto pt-2">
+      {/* Health Advisory */}
+      <p className="text-[11px] sm:text-xs font-medium text-white/60 leading-relaxed mt-auto pt-1 sm:pt-2">
         {advice}
       </p>
     </div>
